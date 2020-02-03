@@ -1,0 +1,92 @@
+---
+title: "Data 607 - Assginment 1"
+author: "Amit Kapoor"
+date: "1/30/2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overview
+This data originates from "Where People Go To Check The Weather". The source of the data is a Survey Monkey Audience poll commissioned by FiveThirtyEight and conducted from April 6 to April 10, 2015.
+
+
+## Data Source
+  https://fivethirtyeight.com/features/weather-forecast-news-app-habits/
+
+
+## Data Description
+* RespondentID
+* Do you typically check a daily weather report? - Yes or No
+* How do you typically check the weather? - The Weather Channel, Local TV News, Radio weather, Internet search, The default weather app on your phone, Newsletter, Newspaper, A specific website or app (please provide the answer)
+* A specific website or app (please provide the answer)	If they responded this value for the second question, they were asked to write-in the app or website they used.
+* If you had a smartwatch (like the soon to be released Apple Watch), how likely or unlikely would you be to check the weather on that device? - Very Likely, Somewhat Likely, Somewhat unlikely, Very unlikely
+* Age - 18-29, 30-44, 45-59, 60+
+* What is your gender? - Female, Male
+* How much total combined money did all members of your HOUSEHOLD earn last year? - $0 to $9,999, $10,000 to $24,999, $25,000 to $49,999, $50,000 to $74,999, $75,000 to $99,999, $100,000 to $124,000, $125,000 to $149,999, $150,000 to $174,999, $175,000 to $199,999, $200,000+, Prefer not to answer.
+* US Region - New England, Middle Atlantic, East North Central, West North Central, South Atlantic, East South Central, West South Central, Mountain, Pacific.
+
+
+
+```{r data-weathercheck, echo=TRUE}
+theLink <- "https://raw.githubusercontent.com/fivethirtyeight/data/master/weather-check/weather-check.csv"
+
+# load data into data frame
+df_weathercheck <- read.csv(file=theLink, header = TRUE, sep = ",")
+
+# display column names
+colnames(df_weathercheck)
+```
+
+
+
+```{r head-weathercheck, echo=TRUE}
+# display header rows
+head(df_weathercheck)
+```
+
+
+```{r total-rows, echo=TRUE}
+nrow(df_weathercheck)
+```
+
+```{r total-cols, echo=TRUE}
+ncol(df_weathercheck)
+```
+
+```{r rename-colnames, echo=TRUE}
+colnames(df_weathercheck)[2] <- "weather_chk"
+colnames(df_weathercheck)[3] <- "weather_chk_src"
+colnames(df_weathercheck)[4] <- "specific_src"
+colnames(df_weathercheck)[5] <- "weather_chk_freq"
+colnames(df_weathercheck)[7] <- "gender"
+colnames(df_weathercheck)[8] <- "household_income"
+colnames(df_weathercheck)[9] <- "us_reg"
+
+head(df_weathercheck)
+```
+
+
+
+```{r summary, echo=TRUE}
+summary(df_weathercheck[,-1])
+```
+
+
+# Conclusions
+
+I see there are 928 rows and 9 columns in this dataset. I renamed columns with shorter names for thosewho are too long. Seeing the summary I conclude below
+
+* More females participated than males.
+* Most of the participants typically check a daily weather report.
+* Most of the participants use default weather app on their phone.
+
+I really wanted to do data analysis to understand the relationship between people checking weather and their age or gender or us region. 
+
+
+
+
