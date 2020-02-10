@@ -9,6 +9,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
 ```
 
 # Overview
@@ -42,51 +43,92 @@ df_weathercheck <- read.csv(file=theLink, header = TRUE, sep = ",")
 colnames(df_weathercheck)
 ```
 
-
+## Preview Data
 
 ```{r head-weathercheck, echo=TRUE}
+
 # display header rows
 head(df_weathercheck)
 ```
 
 
 ```{r total-rows, echo=TRUE}
+
+# total num of rows
 nrow(df_weathercheck)
 ```
 
 ```{r total-cols, echo=TRUE}
+
+# total num of columns
 ncol(df_weathercheck)
 ```
 
+### Renaming Column names
+
 ```{r rename-colnames, echo=TRUE}
+
 colnames(df_weathercheck)[2] <- "weather_chk"
 colnames(df_weathercheck)[3] <- "weather_chk_src"
 colnames(df_weathercheck)[4] <- "specific_src"
 colnames(df_weathercheck)[5] <- "weather_chk_freq"
 colnames(df_weathercheck)[7] <- "gender"
 colnames(df_weathercheck)[8] <- "household_income"
-colnames(df_weathercheck)[9] <- "us_reg"
+colnames(df_weathercheck)[9] <- "us_region"
 
 head(df_weathercheck)
 ```
 
+### Summarizing data
 
 
 ```{r summary, echo=TRUE}
+
+# display summary
 summary(df_weathercheck[,-1])
 ```
+
+## Subsetting
+
+```{r subset, echo=TRUE}
+
+df_weathercheck_subset <- subset(df_weathercheck, select = c(2,3,4,5,6,7))
+head(df_weathercheck_subset)
+```
+
+### Plot between age and weather check frequency.
+
+```{r plot1, echo=TRUE}
+
+barplot(table(df_weathercheck_subset$Age, df_weathercheck_subset$weather_chk_freq), beside = TRUE, legend = TRUE)
+```
+
+### Filter records having columns weather_chk_freq and gender and preview them.
+
+```{r filter-records, echo=TRUE}
+
+# pipeline to filter
+df_weathercheck_summary <- 
+  subset(df_weathercheck, select = c('weather_chk_freq', 'gender')) %>% 
+  group_by(gender) %>% 
+  filter(!(weather_chk_freq == '-' & gender =='-')) 
+
+head(df_weathercheck_summary)
+```
+
+
+### Plot between weather check frequency and gender.
+
+```{r plot2, echo=TRUE}
+barplot(table(df_weathercheck_summary$weather_chk_freq, df_weathercheck_summary$gender), beside = TRUE, legend = TRUE)
+```
+
 
 
 # Conclusions
 
-I see there are 928 rows and 9 columns in this dataset. I renamed columns with shorter names for thosewho are too long. Seeing the summary I conclude below
-
+I see there are 928 rows and 9 columns in this dataset. I renamed columns with shorter names for those who are too long. I did subset the data with 6 columns and generated couple of plots. Seeing the summary I conclude below.
 * More females participated than males.
 * Most of the participants typically check a daily weather report.
 * Most of the participants use default weather app on their phone.
-
-I really wanted to do data analysis to understand the relationship between people checking weather and their age or gender or us region. 
-
-
-
 
