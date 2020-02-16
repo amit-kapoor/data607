@@ -1,0 +1,143 @@
+---
+title: "Data 607 - Assignment 3"
+author: "Amit Kapoor"
+date: "2/10/2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r}
+library(dplyr)
+library(stringr)
+```
+
+
+
+```{r data-college-majors, echo=TRUE}
+theLink <- "https://raw.githubusercontent.com/fivethirtyeight/data/master/college-majors/majors-list.csv"
+
+# load data into data frame
+df_majors <- read.csv(file=theLink, header = TRUE, sep = ",")
+
+head(df_majors)
+```
+
+
+```{r filter-majors, echo=TRUE}
+df_majors %>% 
+  filter(str_detect(Major, "DATA|STATISTICS"))
+```
+
+# Problem 2
+
+```{r define-str, eval=TRUE}
+given_str <- '[1] "bell pepper"  "bilberry"     "blackberry"   "blood orange"
+[5] "blueberry"    "cantaloupe"   "chili pepper" "cloudberry"  
+[9] "elderberry"   "lime"         "lychee"       "mulberry"    
+[13] "olive"        "salal berry"'
+
+given_str
+```
+
+
+```{r extract-str, eval=TRUE}
+# matches [a-z]+ for 1+ times
+extracted_str <- str_extract_all(given_str, '[a-z]+\\s[a-z]+|[a-z]+')
+extracted_str
+```
+
+```{r vec-str, eval=TRUE}
+gsub('[\"]', '', extracted_str)
+```
+
+
+The two exercises below are taken from R for Data Science, 14.3.5.1 in the on-line version:
+
+#3 Describe, in words, what these expressions will match:
+
+(.)\1\1
+
+* (.) is first capturing group and . matches any character
+* \1 matches the same text which is matched by 1st capturing grp
+* \1 matches the same text which is matched by 1st capturing grp
+
+(.)(.)\2\1
+
+* (.) is first capturing group and . matches any character
+* (.) is second capturing group and . matches any character
+* \2 matches the same text which is matched by 2nd capturing grp
+* \1 matches the same text which is matched by 1st capturing grp
+
+(..)\1
+
+* (..) is first capturing group where . matches any character and the next . matches any character
+* \1 matches the same text which is matched by 1st capturing grp
+
+(.).\1.\1
+
+* (.) is first capturing group and . matches any character
+* . matches any character
+* \1 matches the same text which is matched by 1st capturing grp
+* . matches any character
+* \1 matches the same text which is matched by 1st capturing grp
+
+(.)(.)(.).*\3\2\1
+
+* " matches the character "
+* (.) is first capturing group and . matches any character
+* next (.) is second capturing group and . matches any character
+* next (.) is third capturing group and . matches any character
+* .* matches any character as many number of times
+* \1 matches the same text which is matched by 3rd capturing grp
+* \2 matches the same text which is matched by 2nd capturing grp
+* \1 matches the same text which is matched by 1st capturing grp
+
+
+
+
+#4 Construct regular expressions to match words that:
+
+Start and end with the same character.
+
+* ^(.).*\1$
+
+```{r prb-4-1, eval=TRUE}
+str.4.1 <- c("ZOO","YAML","SAS","TOY","MOM")  
+pattern.4.1 <- "^(.).*\\1$"
+str.4.1 %>% 
+  str_subset(pattern.4.1)
+```
+
+
+Contain a repeated pair of letters (e.g. "church" contains "ch" repeated twice.)
+
+* (.)(.).*\1.
+
+```{r prb-4-2, eval=TRUE}
+str.4.2 <- c("church","papa","apple")  
+pattern.4.2 <- "(.)(.).*\\1"
+str.4.2 %>% 
+  str_subset(pattern.4.2)
+```
+
+
+Contain one letter repeated in at least three places (e.g. "eleven" contains three "e"s.)
+
+* (.).\1.\1
+
+```{r prb-4-3, eval=TRUE}
+str.4.3 <- c("eleven","kjkjkjkj","apple")  
+pattern.4.3 <- "(.).\\1.\\1"
+str.4.3 %>% 
+  str_subset(pattern.4.3)
+```
+
+
+
+
+
+
+
+
+
