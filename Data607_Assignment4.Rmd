@@ -1,0 +1,316 @@
+---
+title: "Data 607 - Assignment 4"
+author: "Amit Kapoor"
+date: "2/20/2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r include=FALSE}
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(RSQLite)
+library(sqldf)
+library(kableExtra)
+```
+
+
+
+## Project Overview
+
+This project is to process a text file of chess tournament results as shown below. The tournament results follow some structure and below is the glimpse of data from the given file.
+
+
+
+```{r img-1, echo=FALSE, out.width = '60%'}
+knitr::include_graphics("https://raw.githubusercontent.com/amit-kapoor/data607/master/prj1_glimpse.png")
+```
+
+
+
+The goal of this project is to generate a .CSV file (which could for example be imported into a SQL database) with the following information of the players mentioned in the chess tournament:
+
+* Player’s Name
+* Player’s State
+* Total Number of Points
+* Player’s Pre-Rating
+* Average Pre Chess Rating of Opponents
+
+For the first player listed aboved, Gary Hua, his information to be eventually calculated and exported as:
+
+
+
+```{r result, echo=FALSE}
+df <- data.frame( Players_Name = "Gary Hua", 
+                  Players_State = "ON", 
+                  Total_Number_of_Points = "6.0", 
+                  Playerss_Pre_Rating = "1794", 
+                  Average_Pre_Chess_Rating_of_Opponents = "1605")
+kable(df, col.names = c("Player’s Name", "Player’s State", "Total Number of Points", "Player’s Pre-Rating", "Average Pre Chess Rating of Opponents"), escape = F) %>%
+  kable_styling(latex_options = "hold_position")
+
+```
+
+
+## Setup
+
+The following R packages are required for this project:
+
+* tidyr
+* dplyr
+* stringr
+* sqldf
+
+## Understanding the File Format
+
+Looking at the file, we can see that the file has a header with two rows:
+
+```{r img-2, echo=FALSE, out.width = '60%'}
+knitr::include_graphics("https://raw.githubusercontent.com/amit-kapoor/data607/master/prj1_header.png")
+```
+
+
+The file has a fixed structure having 2 rows for a single player. First line contains Player's Number, Player's Name, Total Points and Round 1-7 results. Each round results has game result longwith opponent player number.
+
+
+
+```{r img-3, echo=FALSE, out.width = '60%'}
+knitr::include_graphics("https://raw.githubusercontent.com/amit-kapoor/data607/master/prj1_rec1.png")
+```
+
+
+Second line contains Player's State, USCF ID, Pre Rating and Post Rating. 
+
+
+```{r img-4, echo=FALSE, out.width = '60%'}
+knitr::include_graphics("https://raw.githubusercontent.com/amit-kapoor/data607/master/prj1_rec2.png")
+```
+
+Note: The combination of two lines forms a complete record for a single player.
+
+
+## Data Processing
+
+
+First load the txt using the read delim method with sep=‘|’ and get the data loaded in dataframe. Use select function from tidyr package to select the dataframe and limit the columns we need. Using Filter function of dplyr package I filter out the rows not needed, and then construct 2 different data frames from our original data frame. One containing the players playing details having (Player name, Total Points, Matches played) and an additional fields names player id as primary key. Second dataframe contains the remaining information for that player e.g. (State, USCF-ID, prerating, postrating again player_id as primaey key.
+
+```{r get-data, echo=TRUE}
+
+# Get the data from tournamentinfo.txt
+theLink <- "https://raw.githubusercontent.com/amit-kapoor/data607/master/tournamentinfo.txt"
+chess_df <- read.delim(file = theLink, header = FALSE, sep="|")
+glimpse(chess_df)
+```
+
+
+```{r filter-rec, echo=TRUE}
+
+# filter out the rows which are not needed
+my_df <- select(chess_df, 1:10)
+
+my_df <- filter(my_df, !grepl(pattern = "[-]+", V1)) %>%
+  filter(row_number() > 2)
+
+head(my_df)
+```
+
+```{r first-dataframe, echo=TRUE}
+
+# create the first data frame with the first row of every player details
+player_details_df <- my_df %>% 
+  filter(grepl(pattern = "[[:digit:]]", V1)) %>% 
+  mutate(player_id = row_number()) 
+head(player_details_df)
+```
+
+```{r second-dataframe, echo=TRUE}
+
+# create the second data frame with the second row of every player details
+player_ratings_df <- my_df %>% 
+  filter(grepl(pattern = "[[:alpha:]]", V1)) %>% 
+  mutate(player_id = row_number()) 
+
+head(player_ratings_df)
+```
+
+
+
+Next step is to seperate the joint values e.g. to separate V2 column in two columns USCF-ID and Rating and then again seperating out PRE-RATING, POST-RATING for every player. Then I rearrange the two data frames by using select and having player_id as first column in both the new dataframes. Then used the merge function of dplyr to merge both the dataframes into one dataframe. Next step I use select, mutate and str_extract functions to clean the value of PRERATING for each row and then rename columns.
+
+
+
+```{r separate-v2, echo=TRUE}
+
+# to separate V2 column in two columns USCF-ID and Rating 
+my_rating <- separate(player_ratings_df, V2, c("USCF-ID", "Rating"), sep="R: ")
+head(my_rating)
+```
+
+
+```{r separate-col-rating, echo=TRUE}
+
+# separate column Rating in two columns PRE-RATING, POST-RATING 
+my_rating <- separate(my_rating, Rating, c("PRERATING", "POSTRATING"), sep="->")
+head(my_rating)
+```
+
+
+```{r sel-col-pd, echo=TRUE}
+
+# select player id and all other columns from player_details_df
+player_details_df <- select(player_details_df, player_id, everything())
+head(player_details_df)
+```
+
+```{r sel-col-myrating, echo=TRUE}
+
+# now select player_id, state, pre rating and post rating from my_rating
+player_ratings_df <- select(my_rating, player_id, V1, PRERATING, POSTRATING)
+head(player_ratings_df)
+```
+
+```{r merge-frame, echo=TRUE}
+
+# merge player_details_df and player_ratings_df by player_id
+player_records <- merge(player_details_df, player_ratings_df, by="player_id")
+head(player_records)
+```
+
+
+```{r drop-col, echo=TRUE}
+
+# drop second column and POSTRATING
+## Also from PRERATING column, extract the number before alphabet if any
+player_records <- select(player_records, 1:13, -2) %>% 
+  mutate(PRERATING = str_extract(PRERATING, "[:digit:]+"))
+head(player_records)
+```
+
+
+```{r ren-col, echo=TRUE}
+# rename columns
+colnames(player_records) <- c("PLAYER_ID", "PLAYER_NAME", "TOTAL_POINTS", "MATCH1", "MATCH2", "MATCH3", "MATCH4", "MATCH5", "MATCH6", "MATCH7", "STATE", "PRE_RATING")
+
+head(player_records)
+```
+
+```{r str-rec, echo=TRUE}
+str(player_records)
+```
+
+
+
+In the next few steps I used the gather function to expand the dataframe in number of rows by having multiple rows for one player id. Then arranged the rows by player_id and then used seperate function to fork a single column into multple column(s). In this scenario we broke each MATCH_RESULT as two columns RESULT and OPPONENT_ID and in last using transform I coonvert the data type of few columns.
+
+
+
+```{r gather-col, echo=TRUE}
+
+# convert column in multiple rows using gather function
+# in this case, multiple rows for given player created from  
+# Match1 to Match7 and their respective values
+
+player_records1 <- gather(player_records, "MATCHES", "MATCH_RESULT", 4:10)
+head(player_records1)
+```
+
+```{r arrange-col, echo=TRUE}
+
+# arrange records by player_id
+player_records1 <- arrange(player_records1, PLAYER_ID)
+head(player_records1)
+```
+
+
+```{r separate-col, echo=TRUE}
+
+# separate MATCH_RESULT as two columns RESULT and OPPONENT_ID
+player_records1 <- separate(player_records1, MATCH_RESULT, c("RESULT", "OPPONENT_ID"))
+head(player_records1)
+```
+
+
+```{r transform-col, echo=TRUE}
+
+# transform OPPONENT_ID and PRE_RATING as integer
+player_records1 <- transform(player_records1, 
+                            OPPONENT_ID = as.integer(OPPONENT_ID), 
+                            PRE_RATING = as.integer(PRE_RATING))
+
+head(player_records1)
+```
+
+
+At last I use sqldf library to run sql queries against our sqldf dataframe to have new dataframe constructed from our datafranme; with the details player_id and average opponent rating having group by on player_id. It gives one row per player_id with average of all the opponent pre ratings. Using the merge function then I merge the original dataframe with the one using sqldf.
+
+
+```{r opp-rating, echo=TRUE}
+
+# get opponent rating
+opp_prerating_df <- sqldf("SELECT A.PLAYER_ID, (SELECT PRE_RATING FROM player_records1 B WHERE B.PLAYER_ID = A.OPPONENT_ID) OPPONENT_RATING FROM player_records1 A")
+glimpse(opp_prerating_df)
+```
+
+```{r compute-avg, echo=TRUE}
+
+# compute average oppnent rating and round off the results group by player_id
+opp_prerating_df <- sqldf("SELECT A.PLAYER_ID, ROUND(AVG(OPPONENT_RATING)) AVG_OPPONENT_RATING FROM opp_prerating_df A GROUP BY PLAYER_ID")
+head(opp_prerating_df)
+```
+
+
+```{r merge-result, echo=TRUE}
+
+# merge avg opponent rating with original data frame
+merged_player_records <- merge(player_records, opp_prerating_df, by="PLAYER_ID")
+head(merged_player_records)
+```
+
+
+# Final Output
+
+To get the final output results and format, first I select all desired columns. Then I swap couple of columns and renamed all as per output needed. Finally I write the output in a .607-Project1.csv file.
+
+
+
+```{r select-columns, echo=TRUE}
+
+# select desired coluns
+desired_player_records <- select(merged_player_records, 2,3,11,12,13)
+head(desired_player_records)
+```
+
+```{r swap-rename-columns, echo=TRUE}
+
+# swap columns as per desired end results
+# state as second column and total_points as third
+desired_player_records <- desired_player_records[, c(1,3,2,4,5)]
+
+# rename columns as desired
+colnames(desired_player_records) <- c("Players Name", "Player's State", "Total Number of Points", "Player's Pre-Rating", "Average Pre Chess Rating of Opponents")
+
+head(desired_player_records)
+```
+
+
+```{r write-to-csv, echo=TRUE}
+
+# write to csv as 607-Project1.csv
+write.csv(desired_player_records, "607-Project1.csv", row.names = F)
+```
+
+
+
+## Summary
+
+This exercise really helped me to understand and use various R packages e.g. dplyr, tidyr, stringr and sqldf using which I  manipulated the dataframes and achieved the target.
+
+
+
+
+
+
+
+
