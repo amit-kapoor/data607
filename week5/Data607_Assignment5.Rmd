@@ -1,0 +1,247 @@
+---
+title: "Data607 - Assignment5"
+author: "Amit Kapoor"
+date: "2/29/2020"
+output:
+  pdf_document: default
+  html_document:
+    toc: true
+    toc_depth: 3
+    theme: united
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(dplyr)
+library(tidyr)
+```
+
+
+## Introduction
+Data manipulation is one of the most important part of Data Science. The purpose of this assignment is to perform data manipulation  using R packages tidyr and dplyr. Data manipulation involves data rearrangement, manipulation and its analysis to make it ready for applicable model.
+
+
+## Problem Statement
+
+We have been provided the data for 2 airlines that describes arrival delays for both of them across five destinations.The task is to create a csv file with the given data and use R libraries tidyr and dplyr as needed to tidy and transform data and then perform analysis to compare the arrival delays for the two airlines.
+
+
+## Solution
+
+The R packages used for the solution are as below.
+* dplyr
+* tidyr
+
+Using read.csv function we populated flights_df from my github repository  https://raw.githubusercontent.com/amit-kapoor/data607/master/week5/flighdetails.csv. We first dropped the blank row from data and then used gather function from tidyr package to gather data in City and Flight Count and then used arrange function from dplyr package by Airline.
+
+Next using spread function from tidyr package, spread the data along arrival to make it wide and then rename columns. Then We used mutate function from dplyr package created new columns Delayed_Perc and OnTime_Perc columns.
+
+We used all these functions to have a final table structure to draw analysis graphs. As graphs needs to be plotted for two different airlines We subset table for two airlines. Alaska and AM West.
+
+
+```{r read-flights-data, echo=TRUE}
+
+# read the data from csv
+flights_df <- read.csv("https://raw.githubusercontent.com/amit-kapoor/data607/master/week5/flighdetails.csv")
+flights_df
+```
+
+
+We do have NAs in the 3rd row. Since its a small dataset, we can simply delete the NAs from 3rd row.
+
+
+```{r drop-NAs-rename, echo=TRUE}
+
+# drop row having NAs and rename columns
+flights_df <- flights_df %>% 
+  drop_na() %>% 
+  rename(Airline=X, Arrival=X.1, "Los Angeles"=Los.Angeles, "San Diego"=San.Diego, "San Francisco"=San.Francisco)
+
+flights_df
+```
+
+From above its visible that the rows with delayed arrival do not have airline populated. Here we know the 2nd row is for Alaska and 4th for AM West.
+
+```{r fill-col, echo=TRUE}
+
+# Replace the blank value in the 2nd row Airline column with Alaska 
+flights_df$Airline[2] <- "Alaska"
+# Replace the blank value in the 4th row Airline column with AM West 
+flights_df$Airline[4] <- "AM West"
+
+flights_df
+```
+
+
+In the next few steps we are going to make data available for analysis using gather, arrange, spread, rename and mutate functions. We will add 2 new columns for %delay and %ontime analysis.
+
+
+```{r gather-arrange, echo=TRUE}
+
+# Gather data in City and Flight Count and then arrange by Airline
+flights_df <- flights_df %>% 
+  gather("City", "Flight_Count", 3:7) %>% 
+  arrange(Airline)
+
+flights_df
+```
+
+
+
+```{r spread-rename, echo=TRUE}
+# spread along arrival to make it wide and then rename columns
+
+flights_df <- flights_df %>% 
+  spread("Arrival", "Flight_Count") %>% 
+  rename(Delayed="delayed", OnTime="on time")
+
+flights_df
+```
+
+
+```{r}
+
+# mutating new columns Delayed_Perc and OnTime_Perc 
+flights_df <- flights_df %>% 
+  mutate(total_count = Delayed+OnTime) %>% 
+  mutate(Delayed_Perc = (Delayed/total_count)*100) %>% 
+  mutate(OnTime_Perc = (OnTime/total_count)*100) %>% 
+  select(1:7, -5)       # dropped total_count column
+
+flights_df
+```
+
+
+## Data Analysis
+
+For Data analysis, subsetting the data for both airlines Alaska and AM West for further analysis.
+
+```{r analyse-data, echo=TRUE}
+
+# create dataframe for Alaska
+alaska_df <- subset(flights_df, flights_df$Airline == "Alaska")
+
+# create dataframe for AM West
+amwest_df <- subset(flights_df, flights_df$Airline == "AM West")
+
+```
+
+
+
+```{r summary-alaska-data, echo=TRUE}
+
+# summary for alaska airline data
+summary(alaska_df)
+```
+
+
+
+```{r summary-amwest-data, echo=TRUE}
+
+# summary for am west airline data
+summary(amwest_df)
+```
+
+
+
+### Analysis for Delayed Arrival
+
+Will all the data munging performed above, we are ready to draw data analysis now for Delayed arrival by seeing side by side comparison for both the airlines. First we created matrix for delayed percentage data for both the airlines and then draw graphs to further analyze. 
+
+
+```{r analyze-arrival-delay, echo=TRUE}
+
+# create matrix with Delayed_Perc by Airline
+arrival_delay <- matrix(c(alaska_df$Delayed_Perc, 
+                      amwest_df$Delayed_Perc), nrow = 2, ncol = 5, byrow = T)
+
+# rename columns as City Names
+colnames(arrival_delay) <- amwest_df$City
+
+arrival_delay
+```
+
+
+Using barplot function bar graph is plotted for side by side comparison for Arrival Delay of both airlines.
+
+
+```{r barplot-arrival_delay, echo=TRUE}
+
+# Draw barplot
+barplot(arrival_delay, 
+        main= "Airlines Comparison for Arrival Delay", 
+        beside=TRUE, 
+        legend.text=TRUE, 
+        col = c("grey", "darkblue"), 
+        xlab = "Cities", 
+        ylab = "% Arrival Delay")
+legend("topleft", legend=c("Alaska", "AM West"), fill = c("grey", "darkblue"))
+```
+
+
+Using boxplot function bar graph for Arrival Delay of both airlines, we can see the delayed percentage distribution of airlines.
+
+```{r boxplot-del-perc, echo=TRUE}
+boxplot(alaska_df$Delayed_Perc, 
+        amwest_df$Delayed_Perc, 
+        names = c("Alaska", "AM West"), 
+        ylab="Delayed Percentage")
+```
+
+
+
+
+### Analysis for On Time Arrival
+
+Here is an additional analysis for OnTime arrical for both the airlines. Similar seps has been performed to create matrix for on time arrival data and then drawn the barplot and boxplot.
+
+```{r barplot-arrival_ontime, echo=TRUE}
+
+# create matrix with OnTime_Perc by Airline
+arrival_ontime <- matrix(c(alaska_df$OnTime_Perc, 
+                      amwest_df$OnTime_Perc), nrow = 2, ncol = 5, byrow = T)
+
+# rename columns as City Names
+colnames(arrival_ontime) <- amwest_df$City
+
+# Draw barplot
+barplot(arrival_ontime, 
+        main= "Airlines Comparison for Arrival OnTime", 
+        beside=TRUE, 
+        legend.text=TRUE, 
+        col = c("grey", "darkblue"), 
+        xlab = "Cities", 
+        ylab = "% Arrival OnTime")
+legend("topright", legend=c("Alaska", "AM West"), fill = c("grey", "darkblue"))
+
+```
+
+
+
+
+```{r boxplot-ontime-perc, echo=TRUE}
+
+# boxplot for ontime arrival data
+boxplot(alaska_df$OnTime_Perc, 
+        amwest_df$OnTime_Perc, 
+        names = c("Alaska", "AM West"), 
+        ylab="On Time Percentage")
+```
+
+
+
+
+## Summary/Conclusion
+
+By analyzing the data for both the Alaska & AM West airlines, it is clear that the mean % arrival delay for Alsaka airline (62) is less that of AM West airline (117). Also from the Bar chart drawn above we can conclude that AM West airline has more % delays as compared to Alaska airline for all the cities. San Francisco has highest % delay for both the airlines.
+
+For Ontime arrival, we can see Alaska airlines has more % arrival ontime in all the cities.
+
+
+
+## References
+
+https://rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf
