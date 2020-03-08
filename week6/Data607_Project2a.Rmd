@@ -1,0 +1,367 @@
+---
+title: "Data607 - Assignment6"
+author: "Amit Kapoor"
+date: "3/5/2020"
+output:
+  pdf_document: default
+  html_document:
+    toc: true
+    toc_depth: 3
+    theme: united
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r include=FALSE}
+library(dplyr)
+library(tidyr)
+library(kableExtra)
+library(ggplot2)
+```
+
+
+# About the data
+
+The data considered here is for best actor and actress Oscar winners from 1929 to 2018. Below are the variables description in the data
+
+  * oscar_no - Oscar ceremony number.
+  * oscar_yr - Year the Oscar ceremony was held.
+  * award - Best actress or Best actor.
+  * name - Name of winning actor or actress.
+  * movie - Name of movie actor or actress got the Oscar for.
+  * age - Age at which the actor or actress won the Oscar.
+  * birth_pl - US State where the actor or actress was born, country if foreign.
+  * birth_mo - Birth month of actor or actress.
+  * birth_d - Birth day of actor or actress.
+  * birth_y - Birth year of actor or actress.
+
+## Data Source
+
+The data source is Journal of Statistical Education, http://jse.amstat.org/datasets/oscars.dat.txt, updated through 2019 using information from Oscars.org and Wikipedia.org. Here it was taken from https://www.openintro.org/data/index.php?data=oscars.
+
+
+# Load the data
+
+The dataset is placed in a csv file in the github repository and loaded here using read.csv function. kable library is used to display data tables.
+
+```{r read-csv, echo=TRUE}
+
+# get the github URL from github
+theURL <- "https://raw.githubusercontent.com/amit-kapoor/data607/master/week6/oscdata.csv"
+
+# read the data from csv
+oscars_df <- read.csv(theURL)
+
+# show intial rows through head
+kable(head(oscars_df), align = "l")
+
+```
+
+
+
+# Tidying the data
+
+Approach: My goal is to clean the data and create new columns for further analysis.
+
+* Rename columns where column names are abbreviated. Here I renamed the columns oscar_yr, birth_pl, birth_mo, birth_d, birth_y.
+* In the next step I loaded the data from builtin R package state. I will use it to compare the values in birth_pl column where most of the entries are from US states.
+* The reason to use state R dataset, desribed above, is to create a new column in our oscars dataset 'from_US'  where the values will be yes or no. If the value in birth_pl column is a valid US state then from_US column will be yes else no. This column will be further analyzed in data analysis to find out best actor/actress are from US or not.
+* Then I created a new sub dataframe to check the number of actors/actress who received Oscar award more than once.
+* Next I created a new column age_group which will have an age range corresponding to the age of actor and actress. This column will be further analyzed in data analysis to find out which age range has most of the best  actor/actress.
+
+
+
+```{r rename-cols, echo=TRUE}
+
+# rename columns
+oscars_df <- oscars_df %>% 
+  rename("oscar_year"=oscar_yr) %>% 
+  rename("birth_place"=birth_pl) %>% 
+  rename("birth_month"=birth_mo) %>% 
+  rename("birth_day"=birth_d) %>% 
+  rename("birth_year"=birth_y)
+
+# show intial rows through head
+kable(head(oscars_df), align = "l")
+
+```
+
+
+
+Loading the data from builtin R package state which will be used to compare the values in birth_pl column where most of the entries are from US states
+
+
+```{r load-states, echo=TRUE}
+data(state)
+state.name
+```
+
+
+Creating a new column ‘from_US’ where the values will be yes or no. If the value in birth_pl column is a valid US state then from_US column will be yes else no. Then changed the value to yes for birth place as Washington DC.
+
+
+```{r from-us, echo=TRUE}
+
+# create new column
+oscars_df <- oscars_df %>% 
+  mutate(from_US = ifelse(birth_place %in% state.name,"yes", "no"))
+
+# put yes for birth place as Washington DC
+oscars_df["from_US"] <- ifelse(oscars_df$birth_place =="Washington DC", "yes",oscars_df$from_US)
+
+kable(head(oscars_df))
+```
+
+Created a new dataframe which will have name and number of counts he/she won the award. Here I filtered the names who won more than once.
+
+
+```{r name-count, echo=TRUE}
+
+# group by name and then summarize
+oscars_grybyname_df <- oscars_df %>% 
+  group_by(name) %>% 
+  summarise(n = n())
+
+# get the name who won more than once
+oscars_grybyname_df[oscars_grybyname_df$n>1,]
+```
+
+Below are the full details of actors and actresses name appeared in dataset more than once.
+
+```{r details-groupby-name, echo=TRUE}
+oscars_df %>% group_by(name) %>% filter(n() > 1)
+```
+
+
+In the next step, created ranges for the dataset which will further be used to put in new column based on the age of actor/actress.
+
+
+```{r def-ranges, echo=TRUE}
+ranges <- c(paste(seq(0, 90, by = 10), seq(10, 99, by = 10), sep = "-"), paste(100, "+", sep = ""))
+ranges
+```
+
+
+To add actor/actress ages to age groups, we create a new column age_group and use the cut function to have age into groups with the ranges, defined in the previous step.
+
+```{r coage-grp, echo=TRUE}
+oscars_df$age_group <- cut(oscars_df$age, breaks = c(seq(0, 100, by = 10), Inf), labels = ranges, right = FALSE)
+head(oscars_df)
+```
+
+
+# Data Analysis
+
+Approach: To analyze the data, I have used below described graphs to get the insights from oscars dataset.
+
+* First plot is to show the bar for all birth_place counts in dataset.
+* Second plot is to show the age_group who has received oscar awards.
+* Next two graphs are to show the best actor and actress award ratio against all birth places in dataset.
+* Last graph to see best actor and actress award ratio against the column from_US.
+
+
+
+```{r birth-place, echo=TRUE}
+ggplot(oscars_df, aes(birth_place, fill=birth_place))+
+  geom_bar() + coord_flip()
+```
+
+
+
+```{r age-group, echo=TRUE}
+
+ggplot(oscars_df, aes(age_group, fill=age_group))+
+  geom_bar() + 
+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+
+```
+
+
+
+```{r birth-place-award, echo=TRUE}
+
+ggplot(oscars_df, aes(birth_place, fill = award)) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = scales::percent) + 
+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+```
+
+
+```{r birth-place-award2, echo=TRUE}
+ggplot(oscars_df, aes(birth_place, fill=award))+
+  geom_bar() + 
+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+```
+
+
+
+
+```{r fromUS-award, echo=TRUE}
+
+ggplot(oscars_df, aes(from_US, fill = award)) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = scales::percent)
+```
+
+On further analysis, noticed for 1933 and 1969 there was a tie for best actor / actress awards.
+
+```{r tie-awards, echo=TRUE}
+filter(oscars_df, oscar_year %in% c("1933", "1969"))
+```
+
+
+# Summary/Conclusion
+
+After doing data anaysis above, we can conclude most of the awards won were from England, California and New York. The age group in which most of the actors and actresses won awards is between 30 to 40 years. Also I see few birth places where only see best actor awards like Australia, Iowa, Hungary to name a few. Same holds true for best actress as well.
+Finally noticed that 1933 and 1969 were the years where it was a tie for best actor / actress awards.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
