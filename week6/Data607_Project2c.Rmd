@@ -1,0 +1,155 @@
+---
+title: "Data607 - Project2C"
+author: "Amit Kapoor"
+date: "3/4/2020"
+output:
+  pdf_document: default
+  html_document:
+    toc: true
+    toc_depth: 3
+    theme: united
+---
+
+
+```{r include=FALSE}
+library(dplyr)
+library(tidyr)
+library(kableExtra)
+library(ggplot2)
+```
+
+
+# About the data
+
+The data considered here is a dataset which has five colors cloths and their reaction to cooling and heating in every 10 minutes. Below are the variables description in the data
+
+  * color - Cloth color
+  * minute.0 - initial reaction 
+  * minute.10 - temp after 10th minute (in Farenheit)
+  * minute.20 - temp after 20th minute (in Farenheit)
+  * minute.30 - temp after 30th minute (in Farenheit)
+  * minute.40 - temp after 40th minute (in Farenheit)
+  * minute.50 - temp after 50th minute (in Farenheit)
+  * minute.60 - temp after 60th minute (in Farenheit)
+  * phase - heating / colling
+  
+  
+  
+# Load the data
+
+
+The dataset is placed in a csv file in the github repository and loaded here using read.csv function. kable library is used to display data tables.
+
+```{r read-csv, echo=TRUE}
+
+# get the github URL from github
+theURL <- "https://raw.githubusercontent.com/amit-kapoor/data607/master/week6/hcdata.csv"
+
+# read the data from csv
+tempreact_df <- read.csv(theURL)
+
+# show intial rows through head
+kable(head(tempreact_df), align = "l")
+
+```
+
+
+
+# Tidying the data
+
+Approach: My goal is to make data appear in a way which would be easy for further analysis. Here are the steps being performed.
+
+* Rename columns where column names are abbreviated. Here I renamed all the columns starts with minute to make it meningful.
+* Next is to filter out the records from original dataframe to separate records for cooling and heating. Here I created 2 dataframes respectively. I have used dplyr filter method to perform this operation.
+* Also used gather function from tidyr to make data from wide to long for both cooling and heating datasets
+
+
+```{r rename-cols, echo=TRUE}
+
+# rename columns
+tempreact_df <- tempreact_df %>% 
+  rename("temp_initial"=minute.0) %>% 
+  rename("temp_after_10"=minute.10) %>% 
+  rename("temp_after_20"=minute.20) %>% 
+  rename("temp_after_30"=minute.30) %>% 
+  rename("temp_after_40"=minute.40) %>% 
+  rename("temp_after_50"=minute.50) %>% 
+  rename("temp_after_60"=minute.60)
+
+
+# show intial rows through head
+kable(head(tempreact_df), align = "l")
+
+```
+
+```{r}
+cooling_phasedf <- filter(tempreact_df, tempreact_df$phase == "cooling")
+kable(cooling_phasedf)
+```
+
+
+```{r cooling-long, echo=TRUE}
+#Change from Wide to long
+cooling_long_df <- gather(cooling_phasedf, Temperature, Value, "temp_initial":"temp_after_60")
+cooling_long_df
+```
+
+
+
+```{r}
+heating_phasedf <- filter(tempreact_df, tempreact_df$phase == "heating")
+kable(heating_phasedf)
+```
+
+
+```{r heating-long, echo=TRUE}
+#Change from Wide to long
+heating_long_df <- gather(heating_phasedf, Temperature, Value, "temp_initial":"temp_after_60")
+heating_long_df
+```
+
+
+
+# Data Analysis
+
+For data analysis I used ggplot, geom_point, geom_line methods from ggplot2 library. I plotted the color on x-axis and temperature on y-axis. I created 2 graphs below to show the cooling and heating effects for different color in data.
+
+```{r cooling, echo=TRUE}
+
+
+cooling_phasedf %>% ggplot(aes(x=cooling_phasedf$color)) + scale_x_discrete(limits=cooling_phasedf$color) + 
+  geom_point(aes(y=cooling_phasedf$temp_initial , group=1)) + geom_line(aes(y=cooling_phasedf$temp_initial, group=1, col="Intial Temp"), size=1) + 
+  geom_point(aes(y=cooling_phasedf$temp_after_10, group=1)) + geom_line(aes(y=cooling_phasedf$temp_after_10, group=1, col="Temp after 10"), size=1) + 
+    geom_point(aes(y=cooling_phasedf$temp_after_20 , group=1)) + geom_line(aes(y=cooling_phasedf$temp_after_20, group=1, col="Temp after 20"), size=1) + 
+  geom_point(aes(y=cooling_phasedf$temp_after_30, group=1)) + geom_line(aes(y=cooling_phasedf$temp_after_30, group=1, col="Temp after 30"), size=1) + 
+  geom_point(aes(y=cooling_phasedf$temp_after_40, group=1)) + geom_line(aes(y=cooling_phasedf$temp_after_40, group=1, col="Temp after 40"), size=1) +
+  geom_point(aes(y=cooling_phasedf$temp_after_50, group=1)) + geom_line(aes(y=cooling_phasedf$temp_after_50, group=1, col="Temp after 50"), size=1) + 
+  geom_point(aes(y=cooling_phasedf$temp_after_60, group=1)) + geom_line(aes(y=cooling_phasedf$temp_after_60, group=1, col="Temp after 60"), size=1) +
+  labs(title="Cooling Temperature Versus Color", x="Color", y="Degrees in Farenheit", colour="") + 
+  scale_colour_manual(values = c("orange", "grey" , "blue" , "green", "cyan" , "black" , "red"))
+```
+
+
+
+```{r heating, echo=TRUE}
+
+heating_phasedf %>% ggplot(aes(x=heating_phasedf$color)) + scale_x_discrete(limits=heating_phasedf$color) + 
+  geom_point(aes(y=heating_phasedf$temp_initial , group=1)) + geom_line(aes(y=heating_phasedf$temp_initial, group=1, col="Intial Temp"), size=1) + 
+  geom_point(aes(y=heating_phasedf$temp_after_10, group=1)) + geom_line(aes(y=heating_phasedf$temp_after_10, group=1, col="Temp after 10"), size=1) + 
+    geom_point(aes(y=heating_phasedf$temp_after_20 , group=1)) + geom_line(aes(y=heating_phasedf$temp_after_20, group=1, col="Temp after 20"), size=1) + 
+  geom_point(aes(y=heating_phasedf$temp_after_30, group=1)) + geom_line(aes(y=heating_phasedf$temp_after_30, group=1, col="Temp after 30"), size=1) + 
+  geom_point(aes(y=heating_phasedf$temp_after_40, group=1)) + geom_line(aes(y=heating_phasedf$temp_after_40, group=1, col="Temp after 40"), size=1) +
+  geom_point(aes(y=heating_phasedf$temp_after_50, group=1)) + geom_line(aes(y=heating_phasedf$temp_after_50, group=1, col="Temp after 50"), size=1) + 
+  geom_point(aes(y=heating_phasedf$temp_after_60, group=1)) + geom_line(aes(y=heating_phasedf$temp_after_60, group=1, col="Temp after 60"), size=1) +
+  labs(title="Heating Temperature Versus Color", x="Color", y="Degrees in Farenheit", colour="") + 
+  scale_colour_manual(values = c("orange", "grey" , "blue" , "green", "cyan" , "black" , "red"))
+```
+
+# Summary/Conclusion
+
+This data used a small .csv file to demonstrate the color effect. I found above graphs interesting for both heating and cooling analysis. We can see above that black color cloth absorbs all colors and appears warmer than white color. More light a color absorbs, more warmer it would be.
+
+
+
+
+
