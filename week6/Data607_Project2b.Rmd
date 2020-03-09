@@ -1,0 +1,210 @@
+---
+title: "Data607 - Project2B"
+author: "Amit Kapoor"
+date: "3/3/2020"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    theme: united
+  pdf_document: default
+---
+
+
+```{r include=FALSE}
+library(dplyr)
+library(tidyr)
+library(kableExtra)
+library(ggplot2)
+```
+
+
+# About the data
+
+The data is collected from the R package: fueleconomy. The fueleconomy package’s data was sourced from the EPA (Environmental Protection Agency). In this package, the data is stored in vehicles dataset.
+
+Fuel economy data contains data for all cars sold in the US from 1984 to 2015. The package fueleconomy has 33,442 rows and 12 variables
+
+  * id Unique EPA identifier 
+  * make Manufacturer 
+  * model Model name 
+  * year Model year
+  * class EPA vehicle size class, http://www.fueleconomy.gov/feg/ws/wsData.shtml#VClass 
+  * trans Transmission
+  * drive Drive train
+  * cyl Number of cylinders
+  * displ Engine displacement, in litres 
+  * fuel Fuel type
+  * hwy Highway fuel economy, in mpg 
+  * cty City fuel economy, in mpg
+
+## Data Source
+
+Further data information in this study can be found in below links:
+
+* **https://blog.rstudio.com/2014/07/23/new-data-packages/**
+* **https://www.fueleconomy.gov/feg/download.shtml**
+
+
+# Load the data
+
+The dataset is loaded from fueleconomy dataset of R in vehicles. kable library is used to display data tables.
+
+```{r setup, echo=TRUE, results='hide', warning=FALSE, message=FALSE}
+
+# load data
+library(fueleconomy)
+
+kable(head(vehicles))
+```
+
+The dimensions of data shows 33384 rows and 13 columns in the dataset.   
+
+```{r veh-dim, eval=TRUE}
+
+# dimensions
+dim(vehicles)
+```
+
+
+# Tidying the data
+
+Approach: My goal is to clean the data and create new columns like mpg for further analysis. 
+
+* Rename columns where column names are abbreviated. Here I renamed the columns oscar_yrhwy and cty to highway and city.
+* Next is to mutate new column called mpg as Per EPA (Environmental protection agency) guidelines which says combined fuel economy is a weighted average of City and Highway MPG values that is calculated by weighting the City value by 55% and the Highway value by 45%.
+* Then I grouped the dataset  by cyl, displacement, year and summarise them.
+
+
+```{r rename-cols, echo=TRUE}
+
+# rename columns
+vehicles <- vehicles %>% 
+  rename("highway"=hwy) %>% 
+  rename("city"=cty)
+
+# show intial rows through head
+kable(head(vehicles), align = "l")
+
+```
+
+
+```{r summ, echo=TRUE}
+summary(vehicles)
+```
+
+
+```{r}
+any(is.na(vehicles))
+```
+
+```{r}
+vehicles_subdf <- vehicles[rowSums(is.na(vehicles)) > 0,]
+kable(head(vehicles_subdf))
+```
+
+
+Per EPA (Environmental protection agency) guidelines, combined fuel economy is a weighted average of City and Highway MPG values that is calculated by weighting the City value by 55% and the Highway value by 45%.
+
+
+```{r mpg, eval=TRUE}
+
+# remove null values
+vehicles <- na.omit(vehicles)
+
+vehicles <- vehicles %>% mutate(mpg = 0.55 * vehicles$city + 0.45 * vehicles$highway)
+kable(head(vehicles))
+```
+
+```{r check-na, eval=TRUE}
+any(is.na(vehicles$cyl))
+```
+
+```{r veh-cyl, echo=TRUE}
+vehicles_cyl <- vehicles %>% filter(!is.na(cyl))
+
+vehicles_cyl %>%
+  group_by(cyl) %>%
+  summarise(n = n(), mean = mean(mpg), median = median(mpg), sd = sd(mpg))
+```
+
+```{r vehicles-displ, eval=TRUE}
+vehicles_displ <- vehicles %>% filter(!is.na(displ))
+
+vehicles_displ %>%
+  group_by(displ) %>%
+  summarise(n = n(), mean = mean(mpg), median = median(mpg), sd = sd(mpg))
+
+```
+
+
+```{r veh-year, eval=TRUE}
+
+vehicles %>%
+  group_by(year) %>%
+  summarise(n = n(), mean = mean(mpg), median = median(mpg), sd = sd(mpg))
+```
+
+
+# Data Analysis
+
+Approach: To analyze the data, I have used below described graphs to get the insights from vehicles dataset.
+
+* First I tried to find make and model having max mpg
+* First plot is to show the mpg distribution in vehicles dataset.
+* Second plot is to show the box plot for cyl and mpg.
+* Third one is to show the details of mpg by factoring with cyl.
+* The last graph is to draw qq plot for mpg variable. It helps to assess the distribution.
+
+```{r max-mpg, eval=TRUE}
+# to find make and model having max mpg
+vehicles[which.max(vehicles$mpg),]
+```
+
+
+
+
+
+```{r hist-mpg, echo=TRUE}
+ggplot(data=vehicles, aes(vehicles$mpg)) + 
+  geom_histogram()
+```
+
+
+```{r boxplot-mpg-cyl, eval=TRUE}
+ggplot(vehicles_cyl, aes(cyl, mpg)) + geom_boxplot(aes(fill = factor(cyl)))
+```
+
+
+```{r ggplot-mpg-cyl, eval=TRUE}
+ggplot(vehicles, aes(mpg)) + geom_histogram(bins = 50, aes(fill = factor(cyl)))
+```
+
+```{r qq-mpg, eval=TRUE}
+qqnorm(vehicles$mpg)
+qqline(vehicles$mpg)
+```
+
+
+# Summary/Conclusion
+
+After doing the above analysis of fueleconomy package from R, the data shows that the average MPG has increased from ~17MPG in 1984 to ~23MPG in 2015. There is signicant evidence that combined MPG differs for engines having different number of cylinders. Also its clear that vehicle with more cylinders give less combined MPG. The data also shows that fuel economy is different for engines having different number of displacments. More displacment performs less on overall MPG. The data provides a number of different variables that could be further analyzed. We could perform multiple regression to predict the gas mileage of a vehicle based upon these characteristics.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
