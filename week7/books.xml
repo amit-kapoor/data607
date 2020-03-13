@@ -1,1 +1,36 @@
-
+<?xml version="1.0"?>
+<books>
+    <book>
+        <title>Data Science for Business</title>
+        <authors>
+                <author>Foster Provost</author>
+                <author>Tom Fawcett</author>
+        </authors>
+        <pages>414</pages>
+        <publisher>O'Reilly Media; 1 edition (August 19, 2013)</publisher>
+        <isbn10>1449361323</isbn10>
+        <isbn13>978-1449361327</isbn13>
+    </book>
+    <book>
+        <title>Hands-On Machine Learning with Scikit-Learn and TensorFlow</title>
+        <authors>
+                <author>Aurélien Géron</author>
+        </authors>
+        <pages>572</pages>
+        <publisher>O'Reilly Media; 1 edition (April 18, 2017)</publisher>
+        <isbn10>1491962291</isbn10>
+        <isbn13>978-1491962299</isbn13>
+    </book>
+    <book>
+        <title>Deep Learning</title>
+        <authors>
+                <author>Ian Goodfellow</author>
+                <author>Yoshua Bengio</author>
+                <author>Aaron Courville</author>
+        </authors>
+        <pages>800</pages>
+        <publisher>The MIT Press (November 18, 2016)</publisher>
+        <isbn10>0262035618</isbn10>
+        <isbn13>978-0262035613</isbn13>
+    </book>
+</books>
