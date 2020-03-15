@@ -1,0 +1,283 @@
+---
+title: "Data607 - Assignment7"
+author: "Amit Kapoor"
+date: "3/11/2020"
+output:
+  html_document: null
+  pdf_document: default
+  theme: journal
+  toc: yes
+  toc_depth: 4
+  toc_float: yes
+  word_document: default
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Introduction
+
+In this assignment, data about 3 books is stored in 3 different format files; XML, JSON and HTML. These 3 files can be accessed through [this github](https://github.com/amit-kapoor/data607/tree/master/week7) link. The task is to load the information from each of the three sources into separate R data frames and compare them.
+
+
+```{r load-lib, echo=TRUE}
+library(XML)
+library(jsonlite)
+library(RCurl)
+library(kableExtra)
+```
+
+### XML {.tabset .tabset-fade .tabset-pills}
+
+XML stands for eXtensible Markup Language and is a markup language much like HTML.
+
+#### XML File
+
+```{r eval=FALSE}
+
+<?xml version="1.0"?>
+<books>
+    <book>
+        <title>Data Science for Business</title>
+        <authors>
+                <author>Foster Provost </author>
+                <author>Tom Fawcett </author>
+        </authors>
+        <pages>414</pages>
+        <publisher>OReilly Media; 1 edition (August 19, 2013)</publisher>
+        <isbn10>1449361323</isbn10>
+        <isbn13>978-1449361327</isbn13>
+    </book>
+    <book>
+        <title>Hands-On Machine Learning with Scikit-Learn and TensorFlow</title>
+        <authors>
+                <author>Aurelien Geron </author>
+        </authors>
+        <pages>572</pages>
+        <publisher>OReilly Media; 1 edition (April 18, 2017)</publisher>
+        <isbn10>1491962291</isbn10>
+        <isbn13>978-1491962299</isbn13>
+    </book>
+    <book>
+        <title>Deep Learning</title>
+        <authors>
+                <author>Ian Goodfellow </author>
+                <author>Yoshua Bengio </author>
+                <author>Aaron Courville </author>
+        </authors>
+        <pages>800</pages>
+        <publisher>The MIT Press (November 18, 2016)</publisher>
+        <isbn10>0262035618</isbn10>
+        <isbn13>978-0262035613</isbn13>
+    </book>
+</books>
+```
+
+
+
+#### Load XML
+
+The steps to be followed here are to first get the xml URL from git hub repository. Then parse the xml using xmlParse method of XML package which generates the XML tree. Finally using xmlToDataFrame method, built the corresponding data frame.
+
+
+```{r load-xml, eval=TRUE}
+
+# Get the XML url from git repo
+thexmlurl <- getURL("https://raw.githubusercontent.com/amit-kapoor/data607/master/week7/books.xml")
+
+# parse xml
+books_xml <- xmlParse(thexmlurl)
+
+# XML to Data Frame
+booksxml_df <- xmlToDataFrame(books_xml)
+
+```
+
+
+#### Output
+
+Show the dataframe into a table structure using kable method from kableExtra package.
+
+```{r output-xml, eval=TRUE}
+
+kable(booksxml_df) %>% 
+  kable_styling(bootstrap_options = c("condensed","striped","hover","responsive"), 
+                full_width = F,position = "left",font_size = 12) %>% 
+  row_spec(0, bold = T, color="white", background ="grey")
+
+```
+
+
+### JSON {.tabset .tabset-fade .tabset-pills}
+
+JSON (JavaScript Object Notation) is a lightweight data-interchange format. It is a way to store and organize information for easily accessibility.
+
+#### JSON File
+
+```{r eval=FALSE}
+[{
+	"title": "Data Science for Business",
+	"authors": ["Foster Provost","Tom Fawcett"],
+  	"pages": "414",
+	"publisher":"OReilly Media; 1 edition (August 19, 2013)",
+	"isbn10": "1449361323" ,
+	"isbn13":"978-1449361327"
+},
+{
+	"title": "Hands-On Machine Learning with Scikit-Learn and TensorFlow",
+	"authors": ["Aurelien Geron"],
+  	"pages": "572",
+	"publisher":"OReilly Media; 1 edition (April 18, 2017)",
+	"isbn10": "1491962291" ,
+	"isbn13":"978-1491962299"
+},
+{
+	"title": "Deep Learning",
+	"authors": ["Ian Goodfellow","Yoshua Bengio","Aaron Courville"],
+  	"pages": "800",
+	"publisher":"The MIT Press (November 18, 2016)",
+	"isbn10": "0262035618" ,
+	"isbn13":"978-0262035613"
+}
+]
+
+```
+
+
+#### Load XML
+
+The steps to be followed here are to first get the json file URL from git hub repository. Then read the JSON using fromJSON method of jsonlite package. Finally using sapply method, get the authors as string for each book in dataframe.
+
+```{r eval=TRUE}
+
+# Get the json url from git repo
+thejsonurl <- getURL("https://raw.githubusercontent.com/amit-kapoor/data607/master/week7/books.json")
+
+# read json
+books_json <- fromJSON(thejsonurl)
+
+# get authors column value for each book 
+books_json$authors <- sapply(books_json$authors, toString)
+
+```
+
+
+
+
+
+#### Output
+
+Show the dataframe into a table structure using kable method from kableExtra package.
+
+```{r output-json, eval=TRUE}
+
+kable(books_json) %>% 
+  kable_styling(bootstrap_options = c("condensed","striped","hover","responsive"), 
+                full_width = F,position = "left",font_size = 12) %>% 
+  row_spec(0, bold = T, color="white", background ="grey")
+
+```
+
+
+### HTML {.tabset .tabset-fade .tabset-pills}
+
+HTML (HyperText Markup Language) is the standard markup language for Web pages and defines the structure of web content.
+
+#### HTML File
+```{r eval=FALSE}
+<html>
+<head>
+	<title>Books</title>
+</head>
+<body>
+	<table>
+    	<tr>
+        	<td>title</td>
+            <td>authors</td>
+           	<td>pages</td>
+            <td>publisher</td>
+            <td>isbn10</td>
+           	<td>isbn13</td>
+        </tr>
+    	<tr>
+        	<td>Data Science for Business</td>
+            <td>Foster Provost Tom Fawcett</td>
+           	<td>414</td>
+            <td>OReilly Media; 1 edition (August 19, 2013)</td>
+            <td>1449361323</td>
+           	<td>978-1449361327</td>
+        </tr>
+        <tr>
+        	<td>Hands-On Machine Learning with Scikit-Learn and TensorFlow</td>
+            <td>Aurelien Geron</td>
+           	<td>572</td>
+            <td>OReilly Media; 1 edition (April 18, 2017)</td>
+            <td>1491962291</td>
+           	<td>978-1491962299</td>
+        </tr>
+    	<tr>
+        	<td>Deep Learning</td>
+            <td>Ian Goodfellow Yoshua Bengio Aaron Courville</td>
+           	<td>800</td>
+            <td>The MIT Press (November 18, 2016)</td>
+            <td>0262035618</td>
+           	<td>978-0262035613</td>
+        </tr>
+</body>
+</html>
+```
+
+
+
+#### Load HTML
+
+Similarly here we first get the html file URL from git hub repository. Then used htmlParse method from XML package to parse books.html file. Next used getNodeSet method to to find table node. Finally used readHTMLTable method to get desired dataframe.
+
+```{r eval=TRUE}
+
+# Get the html url from git repo
+thehtmlurl <- getURL("https://raw.githubusercontent.com/amit-kapoor/data607/master/week7/books.html")
+
+# read json
+books_html <- htmlParse(thehtmlurl)
+
+table <- getNodeSet(books_html, "//table")
+
+bookshtml_df <- readHTMLTable(table[[1]])
+
+```
+
+#### Output
+
+Show the dataframe into a table structure using kable method from kableExtra package.
+
+
+```{r output-html, eval=TRUE}
+
+kable(bookshtml_df) %>% 
+  kable_styling(bootstrap_options = c("condensed","striped","hover","responsive"), 
+                full_width = F,position = "left",font_size = 12) %>% 
+  row_spec(0, bold = T, color="white", background ="grey")
+
+```
+
+
+
+
+## Summary/Conclusion
+
+We can load HTML,XML and JSOn files into R using jsonlite and XML packages. We can extract the node values from HTML/XML based on requirement. From JSON we can get the name/pair values and performed little formatting to make data ready for further analysis. 
+
+Seeing the 3 dataframes, I see all the dataframes identical except the values in author column for JSON file which are comma separated.
+
+
+
+
+
+
+
+
+
+
