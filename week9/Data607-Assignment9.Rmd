@@ -1,1 +1,141 @@
+---
+title: "Data607 - Assignment9"
+author: "Amit Kapoor"
+date: "3/25/2020"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    theme: united
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+## Introduction
+For week9 assignment, we need to connect to one of the New York Times APIs, construct an interface in R to read in the JSON data, and transform it into an R DataFrame.
+
+
+## Problem Statement
+I have chosen to work with Technology under the TopStories API. I am interested here to look for latest top 20 tags in technology.
+
+
+## Solution
+
+The first step to connect to New York Times APIs is to signup and register for apps which will provide the api key to access various apis. api key is needed with every request for NYT apis. Below is the link with all the details to get api-key.
+
+https://developer.nytimes.com/get-started
+
+The R packages used here are as below.
+
+* tidyverse - for data tidying/structuring
+* jsonlite - for data import
+* sqldf - to visualize the data
+* wordcloud2 - to visualize top tags 
+
+
+```{r echo=FALSE}
+library(tidyverse)
+library(jsonlite)
+library(sqldf)
+library(wordcloud)
+library(wordcloud2)
+```
+
+
+```{r api-key, include=FALSE}
+api_key <- "EpwRJoQJKxYfebJtuNueWyOxcESYLoCA"
+```
+
+**Step 1:-** First step is to read data from NYT top stories api for technology using fromJSON() function jsonlite and select relevant columns. In this case columns selected are results.section, results.subsection, results.title, results.abstract, results.url, results.byline, results.published_date, results.des_facet.
+
+
+```{r read-data, echo=TRUE}
+# Read NYT APIs data as JSON
+theURL <- "https://api.nytimes.com/svc/topstories/v2/technology.json"
+
+theURL <- paste0(theURL, "?api-key=" ,api_key)
+
+# select relevant columns from the data and get it as data frame
+tech_data <- fromJSON(theURL, flatten = TRUE) %>% 
+  as.data.frame() %>% 
+  select(results.section, 
+         results.subsection, 
+         results.title, 
+         results.abstract, 
+         results.url, 
+         results.byline, 
+         results.published_date, 
+         results.des_facet)
+
+# show head of data
+head(tech_data)
+```
+
+
+```{r dim-data, echo=TRUE}
+dim(tech_data)
+```
+
+**Step2:-** Then used unnest() function of tidyr (part of tidyverse) lib for column results.des_facet to convert the data from wide to long. In this case all tags in results.des_facet column were unnested in separate rows. After this all columns were renamed as SECTION, SUB_SECTION, TITLE, ABSTRACT, URL ,AUTHOR, PUBLISHED_DATE, TAG respectively.
+
+
+```{r, unnest-rename, echo=TRUE}
+tech_data <- unnest(tech_data, results.des_facet)
+
+# replace column names
+col_names <- c("SECTION","SUB_SECTION","TITLE","ABSTRACT","URL","AUTHOR","PUBLISHED_DATE","TAG")
+colnames(tech_data) <- col_names
+
+# Format AUTHOR column
+tech_data$AUTHOR <- str_replace(tech_data$AUTHOR, 'By ', '')
+
+head(tech_data)
+```
+
+
+**Step3:-** Used sqldf() function to count all the TAG(s) and then order them in decreasing order. The idea is to see top 20 TAGs and their frequency.
+
+
+```{r sqldf, echo=TRUE}
+
+# Gets all TAG and their count from tech_data
+df_tag <- sqldf("SELECT TAG, Count(1) as FREQUENCY FROM tech_data GROUP BY TAG")
+
+# order results in decreasing
+df_tag <- df_tag[order(df_tag$FREQUENCY, decreasing = TRUE),]  
+
+head(df_tag)
+```
+
+
+**Step4:-** To draw a bar plot and visulaize top 20 TAGs and their counts. Also see the top 20 tags through wordcloud2.
+
+
+```{r plot-tag-ct, echo=TRUE}
+
+# ggplot top 20 results
+top_n(df_tag, n=20, FREQUENCY) %>% 
+  ggplot(., aes(x=TAG, y=FREQUENCY, fill=FREQUENCY)) + 
+  geom_bar(stat='identity') + 
+  coord_flip()
+```
+
+
+
+```{r wordcloud2, echo=TRUE}
+wordcloud2(data=top_n(df_tag, n=20, FREQUENCY), size=.25, color='random-dark')
+```
+
+## Summary
+Finally the top tags for top stories listed on the NY Times Technology website are "Coronavirus (2019-nCoV)", "Computers and the Internet", "Epidemics', "Mobile Applications" and "Social Media". Since the data gets updated regularly, it would be fun to see how frequent the tags get changed.
+
+
+
+
+
 
