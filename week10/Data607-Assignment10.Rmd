@@ -1,1 +1,286 @@
+---
+title: "Data607-Assignment10"
+author: "Amit Kapoor"
+date: "4/2/2020"
+output: 
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+### Introduction to Assignment 10
+
+**Part 1. Get the the primary example code from chapter 2 of Text Mining with R and run.**
+
+**Part 2. Extend the code in two ways:**
+* **Work with a different corpus of your choosing**
+* **Incorporate at least one additional sentiment lexicon (possibly from another R package that you’ve found through research).**
+
+
+
+I have used janeaustenr, tidyverse, tidytext and gutenbergr libraries.
+
+```{r load-lib, echo=TRUE}
+
+library(janeaustenr)
+library(tidyverse)
+library(tidytext)
+```
+
+
+
+### Chapter 2 Example Code
+
+#### First I have taken the sample code from Chapter 2 of Text Mining with R. There are 3 sentiment lexicons (AFFIN, bing, nrc) used which from tidytext package. If needed, accept the license before using these lexicons.
+
+
+```{r afinn, echo=TRUE}
+get_sentiments("afinn")
+```
+
+  
+
+```{r bing, echo=TRUE}
+get_sentiments("bing")
+```
+
+
+
+```{r nrc, echo=TRUE}
+get_sentiments("nrc")
+```
+
+
+#### Now we will get the corpus of Jane Austen's books and convert the text to the tidy format by mutating new columns line and chapter.
+
+
+```{r tidy-books, echo=TRUE}
+tidy_books <- austen_books() %>%
+  group_by(book) %>%
+  mutate(linenumber = row_number(),
+         chapter = cumsum(str_detect(text, regex("^chapter [\\divxlc]", 
+                                                 ignore_case = TRUE)))) %>%
+  ungroup() %>%
+  unnest_tokens(word, text)
+
+tidy_books
+```
+
+
+
+#### We have data in tidy form  as we can perdorm different analysis. As mentioned in book, we will then find sentiment score in lines of 80 and then use spread() function to have negative and positive sentiment in separate columns.
+
+
+```{r bing-sent, echo=TRUE}
+
+
+jane_austen_sentiment <- tidy_books %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(book, index = linenumber %/% 80, sentiment) %>%
+  spread(sentiment, n, fill = 0) %>%
+  mutate(sentiment = positive - negative)
+```
+
+#### Let's plot these sentiment scores across the plot trajectory of each novel of Jane Austen. 
+
+```{r plot-all-books, echo=TRUE}
+ggplot(jane_austen_sentiment, aes(index, sentiment, fill = book)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~book, ncol = 2, scales = "free_x")
+
+```
+
+
+#### The example in Chapter 2 focused using all three sentiment lexicons and examine the sentiment changes across the Pride and Prejudice.
+
+
+```{r pp, echo=TRUE}
+pride_prejudice <- tidy_books %>% 
+  filter(book == "Pride & Prejudice")
+
+pride_prejudice
+```
+
+
+
+#### We will do similar analysis as above for Pride and Prejudice against the lexicons NRC and Bing. We will use the same pattern with count(), spread(), and mutate() to find the net sentiment in each of these sections of text.
+
+```{r pp-all, echo=TRUE}
+afinn <- pride_prejudice %>% 
+  inner_join(get_sentiments("afinn")) %>% 
+  group_by(index = linenumber %/% 80) %>% 
+  summarise(sentiment = sum(value)) %>% 
+  mutate(method = "AFINN")
+
+bing_and_nrc <- bind_rows(pride_prejudice %>% 
+                            inner_join(get_sentiments("bing")) %>%
+                            mutate(method = "Bing et al."),
+                          pride_prejudice %>% 
+                            inner_join(get_sentiments("nrc") %>% 
+                                         filter(sentiment %in% c("positive", 
+                                                                 "negative"))) %>%
+                            mutate(method = "NRC")) %>%
+  count(method, index = linenumber %/% 80, sentiment) %>%
+  spread(sentiment, n, fill = 0) %>%
+  mutate(sentiment = positive - negative)
+```
+
+
+#### We now have an estimate of the net sentiment (positive - negative) for each sentiment lexicon. Lets plot it.
+
+
+```{r plot-3, echo=TRUE}
+bind_rows(afinn, 
+          bing_and_nrc) %>%
+  ggplot(aes(index, sentiment, fill = method)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~method, ncol = 1, scales = "free_y")
+```
+
+
+#### Now let's focus on Bing lexicon again. We can arrange them in highest to lowest counts and show them for positive and negative sentiments. Here are the plots to see the same.
+
+
+
+```{r plot-all, echo=TRUE}
+bing_word_counts <- tidy_books %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  ungroup()
+
+bing_word_counts %>%
+  group_by(sentiment) %>%
+  top_n(10) %>%
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(y = "Contribution to sentiment",
+       x = NULL) +
+  coord_flip()
+```
+
+
+### Lexicon loughran
+
+#### I will consider sentiment lexicon for the new corpus analysis. Lets has a look on loughran lexicon which has sentiment categories as negative, positive, uncertainty, litigious, constraining, superfluous. To avoid loading issues, accept license using lexicon_loughran() on console.
+
+```{r sent-lou, echo=TRUE}
+get_sentiments("loughran")
+```
+
+
+
+### Sentiment Analysis on The Jungle Book
+
+#### I have used gutenbergr package to download The Jungle Book. The gutenbergr package helps to download and process public domain works from the Project Gutenberg collection. It includes both tools for downloading books, and a complete dataset of Project Gutenberg metadata.
+
+```{r lib-guten, echo=TRUE}
+library(gutenbergr)
+```
+
+#### Below is the metadata from gutenberg.
+
+```{r meta, echo=TRUE}
+gutenberg_metadata
+```
+
+#### Lets download 'The Jungle Book' which has the gutenberg_id as 236
+
+
+```{r download, echo=TRUE}
+jungle_book <- gutenberg_download(236)
+jungle_book
+```
+
+#### In the next step, I removed few initial rows which has some initial headers. Then I filtered out blank rows, selected the text column, tokenize using unnest_tokens() from tidytext to split text column into words. Then I removed the stop_words and finally mutated the book title.
+
+```{r tidy, echo=TRUE}
+jungle_book_tidy <- jungle_book %>% 
+  slice(-(1:28)) %>% 
+  #Gets rid of blanks rows 
+  filter(!(text=="")) %>% 
+  select(text) %>% 
+  unnest_tokens(output=word, input=text, token='words') %>% 
+  anti_join(stop_words) %>% 
+  mutate(book="The Jungle Book")
+
+jungle_book_tidy
+# 4366
+```
+
+#### Now we use afinn lexicon the jungle book text. Similarly as described in Chapter 2 example, I have summarised the sentiment below. It mutates new column index, sentiment and method. sentiment column is calculated by summing the corresponding sentiment value.
+
+```{r jb-afinn, echo=TRUE}
+jb_afinn <- jungle_book_tidy %>%
+        group_by(book) %>% 
+        mutate(word_count = 1:n(),
+               index = word_count %/% 100 + 1) %>% 
+        inner_join(get_sentiments("afinn")) %>%
+        group_by(book, index) %>%
+        summarise(sentiment = sum(value)) %>%
+        mutate(method = "AFINN")
+
+jb_afinn
+```
+
+
+#### Lets have a look on loughran sentiment count on jungle_book_tidy data.
+
+```{r loughran, echo=TRUE}
+jb_loughran <- jungle_book_tidy %>%
+  right_join(get_sentiments("loughran")) %>%
+  filter(!is.na(sentiment)) %>%
+  count(sentiment, sort = TRUE)
+
+jb_loughran
+```
+
+
+#### In the next pipeline below I have created a similar structure using loughran lexicon. Couple of points to consider here: Only positive and negative categories from loughran lexicon are considered here and sentiment is calculated as (positive - negative).
+
+
+```{r jb-loughran, echo=TRUE}
+jb_loughran <- bind_rows(jungle_book_tidy %>%
+                  group_by(book) %>% 
+                  mutate(word_count = 1:n(),
+                         index = word_count %/% 100 + 1) %>%
+                  inner_join(get_sentiments("loughran") %>%
+                                     filter(sentiment %in% c("positive", "negative"))) %>%
+                  mutate(method = "Loughran")) %>%
+        count(book, method, index = index , sentiment) %>%
+        ungroup() %>%
+        spread(sentiment, n, fill = 0) %>%
+        mutate(sentiment = positive - negative) %>%
+        select(book, index, method, sentiment)
+
+jb_loughran
+```
+
+#### Finally lets draw the plot to compare the two lexicons.
+
+```{r plot, echo=TRUE}
+bind_rows(jb_afinn, jb_loughran) %>% 
+  ggplot(aes(index, sentiment, fill = method)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~method, ncol = 1, scales = "free_y")
+```
+
+
+### Conclusion
+
+Sentiment analysis depends on lexicon used. Here we have used 4 lexicons afinn, bing, nrc and loughran. For the Jungle book corpus described above, I see the plot comparison between afinn and loughran and it appears both the plots follow similar trends though the scales are different.
+
+
+### References:
+
+[https://www.tidytextmining.com/sentiment.html](https://www.tidytextmining.com/sentiment.html)
+[https://juliasilge.com/blog/sentiment-lexicons/](https://juliasilge.com/blog/sentiment-lexicons/)
+[https://cran.r-project.org/web/packages/gutenbergr/vignettes/intro.html](https://cran.r-project.org/web/packages/gutenbergr/vignettes/intro.html)
 
