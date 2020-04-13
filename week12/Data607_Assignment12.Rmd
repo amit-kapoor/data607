@@ -1,1 +1,55 @@
+---
+title: "Data607 - Discussion12"
+author: "Amit Kapoor"
+date: "4/11/2020"
+output: rmdformats::readthedown
+---
 
+
+# LinkedIn Recommendation System
+
+## Introduction
+
+LinkedIn can be described as a Social Network like Facebook, Twitter etc. but unlike them it is a Social Network for Professionals. It predominantly focuses on professional networking and career development. It is designed to help users make professional connections, share their working experiences and resumes, and find jobs.
+
+## Scenario Design for LinkedIn
+
+* **Target Users**: Anyone having professional interest and it ranges from companies' executives to recent college passouts.
+* **Key Goals**: Key goals to connect professionals, recommending connections and jobs, hosting jobs and tools to message both publicly and privately.
+* **How can help**: Have tools to categorize users based on areas of interest, experience, age, industry to name a few. Attract premium users by suggesting them recruiter of their interest.    
+
+## Scenario Design for Customers
+
+* **Target Users**: All users looking to showcase their professional portfolios and seeeking for professional connections.    
+* **Key Goals**: Keys goals for user are to connect with professionals, see recommended jobs that match with their skills, showcase their skills, share posts, search others and endorsements.
+* **How can help**: Analyse users feedback and behavior in recommending them potential connection or an appropriate job. Enhance the interface of applying to a job and Weekly Search appearance.    
+
+## LinkedIn Recommender System
+
+As per papers published on LinkedIn recommender system, it uses content matching and collaborative filtering to recommend potential matches of jobs a user might be interested in. LinkedIn collects user data for positions hold, education, experience and user skilld, data about member’s connections, the joined groups, companies followed to name a few. In order to accurately match members to jobs it uses entity resolution and it applies machine learning classifiers for the entity resolution. 
+
+The LinkedIn Recruiter product provides a ranked list of candidates for a given search request in the form of a job posting, query or recommended candidate. It uses Gradient Boosted Decision Trees models along with a pairwise ranking objective, to compare candidates within the same context. 
+
+## Reverse engineering
+
+The reverse engineering process is limited here to extract information as not being a premium member of LinkedIn. However I could see and analyze a lot by having a free account in LinkedIn.
+
+Connection recommendations: “People you may know” section where professionals with similar backgrounds are listed to have potential connection. It is further devided to list potential connections within the user's current organisation or with similar roles or within the same area or community to name a few.
+
+Job recommendations: Job recommendations are based on user profile. It takes into account user experience, industry, positions held, endorsements. It appears it also lists jobs that are  from companies within the user network.
+
+LinkedIn homepage feeds: It is the landing page or first stop to find content from people who matter to the user. One can browse articles and updates from connections in the feed and easily share them with others.
+
+For recruiters, LinkedIn also suggests the top candidates based on their job posts.
+
+
+## Recommendation
+
+LinkedIn can receive explicit feedbacks from users by conducting short surveys with specific questions on user's interests, background skills and potential job. It would help LinkedIn to have most accurate contents that would lead to attract more users.
+
+LinkedIn should also enhance user experience by recommending how to enhance the current skills of a user. It could be through new learning, certifications or a course. I would love to see some Glassdoor features like workplace culture or salary range to be included in LinkedIn potential job recommendations.
+
+## References
+
+[https://www.quora.com/How-does-LinkedIns-recommendation-system-work](https://www.quora.com/How-does-LinkedIns-recommendation-system-work)
+[https://engineering.linkedin.com/blog/2019/04/ai-behind-linkedin-recruiter-search-and-recommendation-systems](https://engineering.linkedin.com/blog/2019/04/ai-behind-linkedin-recruiter-search-and-recommendation-systems)
