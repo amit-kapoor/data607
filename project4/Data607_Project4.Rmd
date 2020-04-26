@@ -1,16 +1,39 @@
 ---
 title: "Data607 - Project 4"
 author: "Amit Kapoor"
-date: "4/25/2020"
-output: html_document
+date: "4/22/2020"
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: vignette
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-https://www.kaggle.com/balakishan77/spam-or-ham-email-classification/data
-https://www.kaggle.com/karthickveerakumar/spam-filter
+
+# Document Classification
+
+## Introduction
+
+For Project 4 we will try to classify new “test” documents using already classified “training” documents. A common example is using a corpus of labeled spam and ham (non-spam) e-mails to predict whether or not a new document is spam. For this project, we used [kaggle spam/ham dataset](https://www.kaggle.com/karthickveerakumar/spam-filter), then predict the class of new documents. It can be useful to be able to classify new "test" documents using already classified "training" documents.
+
+## Spam Filter Data
+
+I will be using [kaggle Spam Filter dataset](https://www.kaggle.com/karthickveerakumar/spam-filter) for this project. This dataset contains a csv file having spam and ham data. This csv file has following attributes: 'text'	and 'spam'. The variable 'spam' is target variable having values 1 (for spam) or 0 (for ham).
+
+In this project, we will follow below steps:
+
+1. Loading dataset from github
+2. Data analysis
+3. Text pre-preprocessing
+4. Apply Model
+5. Conclusion
+
+## Load packages
+
+Let's load necessary packages which will be needed here.
 
 ```{r}
 library(RCurl)
@@ -24,153 +47,213 @@ library(randomForest)
 library(wordcloud)
 ```
 
+## Load dataset and analysis
 
-```{r}
+First we will load the dataset from github. The dataset has 5,728 observations and 2 columns text and spam indicator.
+
+```{r read-data, echo=TRUE}
 
 #github URL
 url <- getURL("https://raw.githubusercontent.com/amit-kapoor/data607/master/project4/emails.csv")
-
 # Read csv from github
 spamham_df <- read.csv(text = url,stringsAsFactors = FALSE)
-colnames(spamham_df)
+# glimpse data
+glimpse(spamham_df)
 ```
 
-```{r}
-head(spamham_df)
-```
-
-
-
-
-```{r}
+```{r dim-data, echo=TRUE}
+# data dimension
 dim(spamham_df)
 ```
 
+In the next couple of setps we will first see the counts of spam attribute values and then draw the histogram to visualize its count.
 
 ```{r}
+spamham_df %>% group_by(spam) %>% tally()
+```
+
+```{r hist-spam, echo=TRUE}
+# plot histogram for spam variable
 hist(spamham_df$spam)
 ```
 
+## Corpus and text pre-processing
 
+The text attribute contains unstructured data with upper/lower cases, stop words, punctuation, numbers and all. In this section we will address all this by following the standard steps to build and pre-process the corpus.
 
-```{r}
+1. Build a new corpus variable called sh_corpus
+2. Using tm_map, convert the text to lowercase. This will make it uniform.
+3. Using tm_map, remove numbers.
+3. Using tm_map, remove all punctuation from the corpus.
+4. Using tm_map, remove all English stopwords from the corpus as they dont add any value.
+5. Using tm_map, stem the words in the corpus. Word stemming reduces words to unify across documents.
+
+Lets first build the corpus for the text column in our dataset.
+
+```{r corpus, echo=TRUE}
 sh_corpus <- Corpus(VectorSource(spamham_df$text))
+```
 
+Now we will use tm_map transformation.
+
+```{r transform, warning=FALSE, echo=TRUE}
+# lower case
 sh_corpus <- tm_map(sh_corpus, tolower)
+# remove numbers
 sh_corpus <- tm_map(sh_corpus, removeNumbers)
+# remove punctuation
 sh_corpus <- tm_map(sh_corpus, removePunctuation)
+# remove stop words
 sh_corpus <- tm_map(sh_corpus, removeWords, stopwords())
+# stem document
 sh_corpus <- tm_map(sh_corpus, stemDocument)
 ```
 
 
+Next we will create a Document Term Matrix. We will now ready extract the word frequencies to be used in our prediction problem. The tm package provides a function called DocumentTermMatrix() that provides a matrix where the rows correspond to documents and the columns correspond to words. The values in the matrix are the word frequencies in each document.
 
-
-```{r}
+```{r dtm, echo=TRUE}
 # Document term matrix
 sh_dtm <- DocumentTermMatrix(sh_corpus)
 sh_dtm
 ```
 
-```{r}
+We see a high sparcity percentage so will filter out few sparse words.
+
+```{r remove-sparse, echo=TRUE}
+# remove sparsity
 sh_dtm <- removeSparseTerms(sh_dtm,sparse = 0.99)
 sh_dtm
 ```
 
-```{r}
-sh_finaldf <- as.data.frame(as.matrix(sh_dtm))
-sh_finaldf$spam <- spamham_df$spam
+Now we’ll re-construct our dataset from newly created dtm, and add the target variable spam in it.
 
-#dim(sh_finaldf)
+```{r final-df, echo=TRUE}
+# reconstruct data frame from dtm
+sh_finaldf <- as.data.frame(as.matrix(sh_dtm))
+# add target variable
+sh_finaldf$spam <- spamham_df$spam
+# lets see dimension
+dim(sh_finaldf)
 ```
 
+In the next couple of steps we will use wordcloud to see most frequest spam and ham words visualization.
 
-```{r}
+```{r spam-wc, echo=TRUE}
 # spam word cloud
 spam_indices <- which(spamham_df$spam == "1")
-suppressWarnings(wordcloud(sh_corpus[spam_indices], min.freq=50))
+suppressWarnings(wordcloud(sh_corpus[spam_indices], min.freq=50, max.words = 100, random.order = FALSE, random.color = TRUE,colors=palette()))
 ```
 
 
-
-
-
-```{r}
+```{r ham-wc, echo=TRUE}
 # ham word cloud
 ham_indices <- which(spamham_df$spam == "0")
-suppressWarnings(wordcloud(sh_corpus[ham_indices], min.freq=50))
+suppressWarnings(wordcloud(sh_corpus[ham_indices], min.freq=50, max.words = 100, random.order = FALSE, random.color = TRUE,colors=palette()))
 ```
 
 
+## Train/Test Split and Applying model
 
+We will now use this data for out modeling. Before applying models we will split up our dataset into a training set and testing set. Our model(s) will learn from training data and using testing set we’ll test our model(s). It is commong to avoid overfitting. We’ll do a 75:25 for train and test split and use caTools to split it up.
 
-```{r}
-#write.csv(sh_finaldf, file = "./data/spamhamfinal.csv", row.names = FALSE)
-```
+```{r split, echo=TRUE}
+set.seed(197)
 
-
-```{r}
-set.seed(191) 
-
-sample <- sample.split(sh_finaldf, SplitRatio = 0.80)
+sample <- sample.split(sh_finaldf, SplitRatio = 0.75)
 train_df <- subset(sh_finaldf, sample == TRUE)
 test_df  <- subset(sh_finaldf, sample == FALSE)
 ```
 
 
+To apply model we will follow below steps:
 
-```{r}
-nrow(train_df)
-```
-
-```{r}
-nrow(test_df)
-```
+1. Initialize each model classifier with the training set data and target variable in training data.
+2. Make predictions on the test set.
+3. Summarize model.
+3. Check the resuts using confusion matrix.
 
 
-```{r}
+### Support Vector Machine
 
+We will first start with Support Vector Machine model. A Support Vector Machine (SVM) is a classifier defined by a separating hyperplane i.e. given labeled training data the algorithm outputs an optimal hyperplane which categorizes new data. Lets use the above defined steps using svm.
 
-start_time <- Sys.time()
-
+```{r svm, echo=TRUE}
+# initialize svm
 model_svm <- svm(train_df, as.factor(train_df$spam))
+# make predictions using svm
 predict_svm <- predict(model_svm, test_df)
-
-end_time <- Sys.time()
-
-end_time - start_time
 ```
 
-```{r}
+
+```{r summary-svm, echo=TRUE}
+#model summary
 summary(model_svm)
 ```
 
-```{r}
+
+```{r act-pred-svm, echo=TRUE}
+# svm actuals vs predicted
 table(`Actual Class` = test_df$spam, `Predicted Class` = predict_svm)
 ```
 
 
-
-
-```{r}
+```{r conf-mat-svm, echo=TRUE}
+# svm confusion matrix
 confusionMatrix(data = predict_svm, reference = as.factor(test_df$spam),
-                positive = "1", dnn = c("SVM Prediction", "SVM Actual"))
+                positive = "1", dnn = c("svm prediction", "svm actual"))
 ```
 
 
+### Random Forest
 
-```{r randomeforest, echo=TRUE}
-start_time <- Sys.time()
+Next we will use another model RandomForest to make predictions and do comparison with svm. It is an ensemble tree-based learning algorithm. The Random Forest Classifier uses a set of decision trees from randomly selected subset of training data and aggregates the results from different decision trees to make decision of the final class of the test data.
 
+```{r randomforest, echo=TRUE}
+# initialize random forest
 model_rf <- randomForest(train_df, as.factor(train_df$spam))
+# make predictions using random forest
 predict_rf <- predict(model_rf, test_df)
 
-end_time <- Sys.time()
-
-end_time - start_time
 ```
 
-```{r}
-confusionMatrix(data = predict_rf, reference = as.factor(test_df$spam), positive = "1", dnn = c("RF Prediction", "RF Actual"))
+```{r summary-rf, echo=TRUE}
+#model summary
+summary(model_rf)
 ```
+
+
+```{r act-pred-rf, echo=TRUE}
+# rf actuals vs predicted
+table(`Actual Class` = test_df$spam, `Predicted Class` = predict_rf)
+```
+
+
+```{r conf-mat-rf, echo=TRUE}
+# rf confusion matrix
+confusionMatrix(data = predict_rf, reference = as.factor(test_df$spam), positive = "1", dnn = c("rf prediction", "rf actual"))
+```
+
+
+## Conclusion
+
+Looking at above models implemented on training dataset, predicted for our test dataset and the accuracy shown for both models it seems that Random Forest Model’s accuracy (~99%) is more accurate than SVM (~98% ) Model. Also Random Forest took more time to run as compared to SVM. We could also use hyper paramter tuning to improve our model performance.
+
+## Recommendation
+
+We could run few more advance models and compare results for further improvements. We could also further modify our corpus by reducing data sparsity.
+
+
+## References
+
+[Kaggle Dataset](https://www.kaggle.com/karthickveerakumar/spam-filter)  
+
+[Stemming Words](https://cran.r-project.org/web/packages/corpus/vignettes/stemmer.html)  
+
+[Support Vector Machine](https://en.wikipedia.org/wiki/Support-vector_machine)  
+
+[Random Forest](https://en.wikipedia.org/wiki/Random_forest)  
+
+
+
 
