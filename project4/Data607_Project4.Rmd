@@ -1,0 +1,176 @@
+---
+title: "Data607 - Project 4"
+author: "Amit Kapoor"
+date: "4/25/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+https://www.kaggle.com/balakishan77/spam-or-ham-email-classification/data
+https://www.kaggle.com/karthickveerakumar/spam-filter
+
+```{r}
+library(RCurl)
+library(dplyr)
+library(tm)
+library(caTools)
+library(e1071)
+library(caret)
+library(SnowballC)
+library(randomForest)
+library(wordcloud)
+```
+
+
+```{r}
+
+#github URL
+url <- getURL("https://raw.githubusercontent.com/amit-kapoor/data607/master/project4/emails.csv")
+
+# Read csv from github
+spamham_df <- read.csv(text = url,stringsAsFactors = FALSE)
+colnames(spamham_df)
+```
+
+```{r}
+head(spamham_df)
+```
+
+
+
+
+```{r}
+dim(spamham_df)
+```
+
+
+```{r}
+hist(spamham_df$spam)
+```
+
+
+
+```{r}
+sh_corpus <- Corpus(VectorSource(spamham_df$text))
+
+sh_corpus <- tm_map(sh_corpus, tolower)
+sh_corpus <- tm_map(sh_corpus, removeNumbers)
+sh_corpus <- tm_map(sh_corpus, removePunctuation)
+sh_corpus <- tm_map(sh_corpus, removeWords, stopwords())
+sh_corpus <- tm_map(sh_corpus, stemDocument)
+```
+
+
+
+
+```{r}
+# Document term matrix
+sh_dtm <- DocumentTermMatrix(sh_corpus)
+sh_dtm
+```
+
+```{r}
+sh_dtm <- removeSparseTerms(sh_dtm,sparse = 0.99)
+sh_dtm
+```
+
+```{r}
+sh_finaldf <- as.data.frame(as.matrix(sh_dtm))
+sh_finaldf$spam <- spamham_df$spam
+
+#dim(sh_finaldf)
+```
+
+
+```{r}
+# spam word cloud
+spam_indices <- which(spamham_df$spam == "1")
+suppressWarnings(wordcloud(sh_corpus[spam_indices], min.freq=50))
+```
+
+
+
+
+
+```{r}
+# ham word cloud
+ham_indices <- which(spamham_df$spam == "0")
+suppressWarnings(wordcloud(sh_corpus[ham_indices], min.freq=50))
+```
+
+
+
+
+```{r}
+#write.csv(sh_finaldf, file = "./data/spamhamfinal.csv", row.names = FALSE)
+```
+
+
+```{r}
+set.seed(191) 
+
+sample <- sample.split(sh_finaldf, SplitRatio = 0.80)
+train_df <- subset(sh_finaldf, sample == TRUE)
+test_df  <- subset(sh_finaldf, sample == FALSE)
+```
+
+
+
+```{r}
+nrow(train_df)
+```
+
+```{r}
+nrow(test_df)
+```
+
+
+```{r}
+
+
+start_time <- Sys.time()
+
+model_svm <- svm(train_df, as.factor(train_df$spam))
+predict_svm <- predict(model_svm, test_df)
+
+end_time <- Sys.time()
+
+end_time - start_time
+```
+
+```{r}
+summary(model_svm)
+```
+
+```{r}
+table(`Actual Class` = test_df$spam, `Predicted Class` = predict_svm)
+```
+
+
+
+
+```{r}
+confusionMatrix(data = predict_svm, reference = as.factor(test_df$spam),
+                positive = "1", dnn = c("SVM Prediction", "SVM Actual"))
+```
+
+
+
+```{r randomeforest, echo=TRUE}
+start_time <- Sys.time()
+
+model_rf <- randomForest(train_df, as.factor(train_df$spam))
+predict_rf <- predict(model_rf, test_df)
+
+end_time <- Sys.time()
+
+end_time - start_time
+```
+
+```{r}
+confusionMatrix(data = predict_rf, reference = as.factor(test_df$spam), positive = "1", dnn = c("RF Prediction", "RF Actual"))
+```
+
